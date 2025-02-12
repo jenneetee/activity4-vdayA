@@ -19,7 +19,9 @@ class _HeartbeatAppState extends State<HeartbeatApp>
   int _countdown = 10;
   bool _isPlaying = false;
   final Random _random = Random();
-  List<Widget> _sparkles = [];
+  List<ConfettiParticle> _confetti = [];
+  final TextEditingController _messageController = TextEditingController();
+  String _selectedMessage = "";
 
   @override
   void initState() {
@@ -37,7 +39,7 @@ class _HeartbeatAppState extends State<HeartbeatApp>
     setState(() {
       _isPlaying = true;
       _countdown = 10;
-      _generateSparkles();
+      _generateConfetti();
     });
     _timer = Timer.periodic(Duration(seconds: 1), (timer) {
       setState(() {
@@ -54,29 +56,18 @@ class _HeartbeatAppState extends State<HeartbeatApp>
     _timer.cancel();
     setState(() {
       _isPlaying = false;
-      _sparkles.clear();
+      _confetti.clear();
     });
   }
 
-  void _generateSparkles() {
-    _sparkles = List.generate(15, (index) {
-      double left = _random.nextDouble() * 300;
-      double top = _random.nextDouble() * 600;
-      return Positioned(
-        left: left,
-        top: top,
-        child: Icon(
-          Icons.star,
-          color: const Color.fromARGB(255, 225, 60, 126),
-          size: _random.nextDouble() * 15 + 10,
-        ),
-      );
-    });
+  void _generateConfetti() {
+    _confetti = List.generate(20, (index) => ConfettiParticle());
   }
 
   @override
   void dispose() {
     _controller.dispose();
+    _messageController.dispose();
     super.dispose();
   }
 
@@ -87,7 +78,7 @@ class _HeartbeatAppState extends State<HeartbeatApp>
       home: Scaffold(
         backgroundColor: Colors.pink[50],
         appBar: AppBar(
-          title: Text("Valentine's Heartbeat"),
+          title: Text("Activity 4: Valentine's Heartbeat"),
           backgroundColor: Colors.pink,
         ),
         body: Stack(
@@ -96,6 +87,21 @@ class _HeartbeatAppState extends State<HeartbeatApp>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: TextField(
+                      controller: _messageController,
+                      decoration: InputDecoration(
+                        border: OutlineInputBorder(),
+                        labelText: "Enter a Valentine's message",
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedMessage = value;
+                        });
+                      },
+                    ),
+                  ),
                   ScaleTransition(
                     scale: _animation,
                     child: Icon(
@@ -119,7 +125,9 @@ class _HeartbeatAppState extends State<HeartbeatApp>
                     opacity: _isPlaying ? 1.0 : 0.0,
                     duration: Duration(seconds: 1),
                     child: Text(
-                      "Happy Valentine's Day! ❤️",
+                      _selectedMessage.isEmpty
+                          ? "Happy Valentine's Day! ❤️"
+                          : _selectedMessage,
                       style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -129,10 +137,60 @@ class _HeartbeatAppState extends State<HeartbeatApp>
                 ],
               ),
             ),
-            if (_isPlaying) ..._sparkles,
+            if (_isPlaying) ..._confetti,
           ],
         ),
       ),
     );
+  }
+}
+
+class ConfettiParticle extends StatefulWidget {
+  @override
+  _ConfettiParticleState createState() => _ConfettiParticleState();
+}
+
+class _ConfettiParticleState extends State<ConfettiParticle>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+  final Random _random = Random();
+  double left = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    left = _random.nextDouble() * 300;
+    _controller = AnimationController(
+      vsync: this,
+      duration: Duration(seconds: 3 + _random.nextInt(3)),
+    )..forward();
+
+    _animation = Tween<double>(begin: -50, end: 600)
+        .animate(CurvedAnimation(parent: _controller, curve: Curves.easeIn));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Positioned(
+          left: left,
+          top: _animation.value,
+          child: Icon(
+            Icons.star,
+            color: Colors.primaries[_random.nextInt(Colors.primaries.length)],
+            size: _random.nextDouble() * 15 + 10,
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 }
